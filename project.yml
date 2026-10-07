@@ -1,0 +1,58 @@
+name: Overhear
+options:
+  bundleIdPrefix: com.davidwang7723
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+
+packages:
+  SwiftMath:
+    url: https://github.com/mgriebling/SwiftMath.git
+    from: "1.5.0"
+
+targets:
+  Overhear:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+      - path: Resources/Assets.xcassets
+      # Vendored Speex echo canceller (AEC): subtracts what the speakers are
+      # playing from the mic before transcription. C sources, warnings silenced.
+      # -ffile-prefix-map rewrites the absolute build path the C code embeds via
+      # __FILE__ (kiss_fft asserts) so the shipped binary leaks no username/paths.
+      - path: ThirdParty/speexdsp
+        compilerFlags: "-w -DFLOATING_POINT -DUSE_KISS_FFT -DEXPORT= -ffile-prefix-map=$(SRCROOT)=."
+    dependencies:
+      - package: SwiftMath
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleName: Overhear
+        CFBundleDisplayName: Overhear
+        # Resolved from build settings so build.sh can inject the version.
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSMinimumSystemVersion: "26.0"
+        # Menu-bar agent: no Dock icon, no main window.
+        LSUIElement: true
+        NSHumanReadableCopyright: ""
+        NSMicrophoneUsageDescription: "Overhear transcribes your microphone locally to answer questions. Audio never leaves your device."
+        NSScreenCaptureUsageDescription: "Overhear captures system audio and screen content locally to help answer questions. Nothing leaves your device."
+        # Allow HTTP only to localhost (the Ollama server). No arbitrary loads.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.davidwang7723.Overhear
+        MARKETING_VERSION: "1.5.2"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: Resources/Overhear.entitlements
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_VERSION: "5.0"
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/App/Overhear-Bridging-Header.h
+        HEADER_SEARCH_PATHS: "$(SRCROOT)/ThirdParty/speexdsp"
+        SWIFT_STRICT_CONCURRENCY: minimal
+        DEAD_CODE_STRIPPING: YES
